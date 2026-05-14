@@ -1,0 +1,13 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: FincomAlertService
+
+logging:
+  level:
+    com.fincom.alerts: DEBUG
+    org.springframework.web: INFO
+  pattern:
+    console: "%d{HH:mm:ss} %-5level [%thread] %logger{36} - %msg%n"
