@@ -100,7 +100,7 @@ class AlertServiceImplTest {
         when(repository.save(any(Alert.class))).thenAnswer(inv -> inv.getArgument(0));
         when(mapper.toResponse(any(Alert.class))).thenReturn(alertResponse);
 
-        AlertResponse res = service.decide("a1", "tenant-1", req);
+        service.decide("a1", "tenant-1", req);
 
         verify(repository).findByIdAndTenantId("a1", "tenant-1");
         verify(repository).save(any(Alert.class));
@@ -138,7 +138,7 @@ class AlertServiceImplTest {
         when(repository.save(any(Alert.class))).thenAnswer(inv -> inv.getArgument(0));
         when(mapper.toResponse(any(Alert.class))).thenReturn(alertResponse);
 
-        AlertResponse res = service.escalate("a1", "tenant-1");
+        service.escalate("a1", "tenant-1");
 
         verify(repository).findByIdAndTenantId("a1", "tenant-1");
         verify(repository).save(any(Alert.class));
