@@ -1,4 +1,4 @@
-# Sanctions Alert Service
+plication uses an# Sanctions Alert Service
 
 ## How to Run
 
@@ -14,14 +14,33 @@ mvn test
 
 Base URL: http://localhost:8080/api/v1
 
-H2 console available at: http://localhost:8080/h2-console
+## Local Database
 
+The application uses an in-memory H2 database for local development and automated tests.
+
+```text
 JDBC URL: jdbc:h2:mem:alertsdb
-
 Username: sa
+Password: <empty>
+```
 
-Password: (none)
+The H2 web console is not enabled by default.
 
+If the H2 console is needed for local debugging, add the required Spring Boot H2 console dependency and enable it only in local configuration.
+
+For Spring Boot 4, enabling the H2 web console may require the `spring-boot-h2console` dependency in addition to the console configuration.
+
+Example local configuration:
+
+```yaml
+spring:
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+```
+
+Do not rely on the H2 in-memory database for production. It is intended only for local development and automated tests.  
 ---
 
 ## API Endpoints
@@ -33,31 +52,126 @@ Password: (none)
 | PATCH | /api/v1/alerts/{id}/decision | Decide an alert (CLEARED or CONFIRMED_HIT) with a decision note | X-Tenant-ID |
 | PATCH | /api/v1/alerts/{id}/escalate | Escalate an OPEN alert to ESCALATED | X-Tenant-ID |
 
-Examples (curl)
+## API Usage Examples
 
-- Create alert
+By default, the application runs on:
 
-curl -i -X POST http://localhost:8080/api/v1/alerts \
-  -H "Content-Type: application/json" \
-  -H "X-Tenant-ID: tenant-1" \
-  -d '{"transactionId":"tx-123","matchedEntityName":"John Doe","matchScore":85,"assignedTo":"analyst-1"}'
+```text
+http://localhost:8080
+```
 
-- List alerts
+If port `8080` is already in use, run the application on another port, for example:
 
+```bash
+--server.port=8081
+```
+
+Then replace `8080` with `8081` in the examples below.
+
+---
+
+## Create Alert
+
+### PowerShell
+
+```powershell
+curl.exe -i -X POST "http://localhost:8080/api/v1/alerts" -H "Content-Type: application/json" -H "X-Tenant-ID: tenant-1" -d '{"transactionId":"tx-123","matchedEntityName":"John Doe","matchScore":85,"assignedTo":"analyst-1"}'
+```
+
+### Git Bash / Linux / macOS
+
+```bash
+curl -i -X POST "http://localhost:8080/api/v1/alerts" \
+-H "Content-Type: application/json" \
+-H "X-Tenant-ID: tenant-1" \
+-d '{"transactionId":"tx-123","matchedEntityName":"John Doe","matchScore":85,"assignedTo":"analyst-1"}'
+```
+
+### Expected Response
+
+```json
+{
+  "id": "generated-alert-id",
+  "transactionId": "tx-123",
+  "matchedEntityName": "John Doe",
+  "matchScore": 85,
+  "status": "OPEN",
+  "assignedTo": "analyst-1",
+  "tenantId": "tenant-1",
+  "createdAt": "2026-05-14T20:06:34.639616100Z",
+  "updatedAt": "2026-05-14T20:06:34.639616100Z",
+  "decisionNote": null
+}
+```
+
+---
+
+## List Alerts
+
+### PowerShell
+
+```powershell
+curl.exe -i -X GET "http://localhost:8080/api/v1/alerts?status=OPEN&minMatchScore=80" -H "X-Tenant-ID: tenant-1"
+```
+
+### Git Bash / Linux / macOS
+
+```bash
 curl -i -X GET "http://localhost:8080/api/v1/alerts?status=OPEN&minMatchScore=80" \
-  -H "X-Tenant-ID: tenant-1"
+-H "X-Tenant-ID: tenant-1"
+```
 
-- Decide an alert
+---
 
-curl -i -X PATCH http://localhost:8080/api/v1/alerts/{id}/decision \
-  -H "Content-Type: application/json" \
-  -H "X-Tenant-ID: tenant-1" \
-  -d '{"decision":"CLEARED","decisionNote":"Investigated and cleared"}'
+## Escalate Alert
 
-- Escalate an alert
+Replace `{id}` with the alert ID returned from the create alert response.
 
-curl -i -X PATCH http://localhost:8080/api/v1/alerts/{id}/escalate \
-  -H "X-Tenant-ID: tenant-1"
+### PowerShell
+
+```powershell
+curl.exe -i -X PATCH "http://localhost:8080/api/v1/alerts/{id}/escalate" -H "X-Tenant-ID: tenant-1"
+```
+
+### Git Bash / Linux / macOS
+
+```bash
+curl -i -X PATCH "http://localhost:8080/api/v1/alerts/{id}/escalate" \
+-H "X-Tenant-ID: tenant-1"
+```
+
+---
+
+## Decide Alert
+
+Replace `{id}` with the alert ID returned from the create alert response.
+
+### PowerShell
+
+```powershell
+curl.exe -i -X PATCH "http://localhost:8080/api/v1/alerts/{id}/decision" -H "Content-Type: application/json" -H "X-Tenant-ID: tenant-1" -d '{"decision":"CLEARED","decisionNote":"Investigated and cleared"}'
+```
+
+### Git Bash / Linux / macOS
+
+```bash
+curl -i -X PATCH "http://localhost:8080/api/v1/alerts/{id}/decision" \
+-H "Content-Type: application/json" \
+-H "X-Tenant-ID: tenant-1" \
+-d '{"decision":"CLEARED","decisionNote":"Investigated and cleared"}'
+```
+
+---
+
+## Notes
+
+- `X-Tenant-ID` is required for all API requests.
+- `matchScore` must be between `0` and `100`.
+- New alerts are created with status `OPEN`.
+- Alerts can be escalated from `OPEN` to `ESCALATED`.
+- Decision actions can mark alerts as `CLEARED` or `CONFIRMED_HIT`, depending on the supported state transition rules.
+- On Windows PowerShell, use `curl.exe` instead of `curl`.
+- In PowerShell, prefer one-line commands to avoid line-continuation issues.
 
 ---
 
