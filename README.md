@@ -1,4 +1,4 @@
-plication uses an# Sanctions Alert Service
+# Sanctions Alert Service
 
 ## How to Run
 
@@ -51,6 +51,16 @@ Do not rely on the H2 in-memory database for production. It is intended only for
 | GET  | /api/v1/alerts | List alerts with optional filters (status, minMatchScore) | X-Tenant-ID |
 | PATCH | /api/v1/alerts/{id}/decision | Decide an alert (CLEARED or CONFIRMED_HIT) with a decision note | X-Tenant-ID |
 | PATCH | /api/v1/alerts/{id}/escalate | Escalate an OPEN alert to ESCALATED | X-Tenant-ID |
+
+
+### API Versioning
+
+The service uses URL-based API versioning.
+
+Current endpoints are exposed under `/api/v1`.
+
+Backward-compatible changes may remain under the existing version. Breaking API contract changes should be introduced under a new version path, such as `/api/v2`, while keeping `/api/v1` available during a deprecation period when possible.
+
 
 ## API Usage Examples
 
@@ -190,7 +200,7 @@ curl -i -X PATCH "http://localhost:8080/api/v1/alerts/{id}/decision" \
 - TenantArgumentResolver extracts and validates the header before controller methods are invoked.
 - All repository queries include tenantId as a mandatory filter; single-resource fetches use findByIdAndTenantId to prevent cross-tenant access.
 - Requests missing or containing a blank X-Tenant-ID are rejected with 400 Bad Request.
-- Threat model assumption: this service sits behind an API gateway that authenticates callers; the gateway is responsible for injecting/validating X-Tenant-ID so the service trusts the header after a presence check.
+- Threat model assumption: in production, this service is expected to run behind an API gateway that authenticates callers and injects or validates X-Tenant-ID. The service performs only a defensive presence check for the header and then trusts the tenant value provided by the gateway. Requests missing X-Tenant-ID are rejected to protect local runs, tests, and misconfigured routing paths, but tenant authorization is intentionally delegated to the gateway.
 
 Why X-Tenant-ID is carried in the header — alternatives considered:
 
@@ -276,25 +286,30 @@ Note: The spec does not explicitly state that ESCALATED alerts can be decided. W
 - Replace LoggingEventPublisher with a Kafka or SQS publisher implementation
 
 ### Security
-- Add Spring Security with JWT authentication
-- Validate tenant identity against an identity provider rather than trusting the header directly
-- Add rate limiting per tenant
+
+Production hardening should be implemented at the API gateway / ingress layer where possible.
+
+- Authenticate callers using JWT.
+- Validate tenant identity against an identity provider or authorization service.
+- Inject or validate `X-Tenant-ID` only after authentication and tenant authorization succeed.
+- Configure per-tenant rate limiting at the gateway / ingress layer using the authenticated tenant identity or validated `X-Tenant-ID` as the rate-limit key.
+- Keep the service-side `X-Tenant-ID` presence check as a defensive guard.
+
+The service currently trusts `X-Tenant-ID` after a presence check, based on the assumption that upstream infrastructure has already authenticated the caller and validated the tenant.
 
 ### Observability
-- Add MDC with tenantId and requestId for distributed tracing across log lines
-- Integrate OpenTelemetry for traces and metrics
-- Configure async logging via Logback AsyncAppender or migrate to Log4J2 for high-throughput scenarios
+- Add MDC-based logging context with `tenantId` and `requestId`, so log lines from the same request can be correlated across the service and downstream calls.
+- Integrate OpenTelemetry for distributed traces and metrics, so production deployments can monitor request latency, error rates, downstream dependencies, and tenant-level operational behavior.
+- For high-throughput production deployments, configure asynchronous logging using Logback `AsyncAppender` or consider Log4J2 async logging to reduce request-thread blocking caused by log I/O.
 
 ### API
 - Add pagination to the list endpoint (page, size query params)
-- Add API versioning strategy
-- Add Swagger/OpenAPI documentation via springdoc-openapi
+- Formalize and maintain the API versioning policy as the API evolves
+- - Add Swagger/OpenAPI documentation using `springdoc-openapi`, so API endpoints, request/response schemas, headers, query parameters, and status codes are documented and testable through Swagger UI.
 
 ### Resilience
-- Add retry logic on event publishing failures
-- Add a dead-letter mechanism for failed events
-- Add circuit breaker if the service calls external APIs
+- Add bounded retry logic for transient event publishing failures, with backoff to avoid overwhelming the broker.
+- Add a dead-letter mechanism for permanently failed events, such as a Kafka dead-letter topic, SQS dead-letter queue, or database-backed failed-event table, so publishing failures can be investigated and replayed.
+- Add circuit breakers, timeouts, and fallback handling if the service later calls external APIs or downstream services.
 
 ---
-
-If you want, I can also update the project's README.txt notes into this README.md or add an OpenAPI description file for the endpoints.
