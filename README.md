@@ -24,6 +24,13 @@ Username: sa
 Password: <empty>
 ```
 
+
+Local developer-specific database overrides may be placed in `src/main/resources/application-local.yml`.
+
+This file is intentionally ignored by Git and should not be committed. It can be used for machine-specific settings such as a local database URL, username, password, or server port.
+
+For shared configuration, use `application.yml`. For production environments, database credentials should be provided through environment variables, secrets management, or deployment configuration rather than committed files.
+
 The H2 web console is not enabled by default.
 
 If the H2 console is needed for local debugging, add the required Spring Boot H2 console dependency and enable it only in local configuration.
@@ -305,7 +312,7 @@ The service currently trusts `X-Tenant-ID` after a presence check, based on the 
 ### API
 - Add pagination to the list endpoint (page, size query params)
 - Formalize and maintain the API versioning policy as the API evolves
-- - Add Swagger/OpenAPI documentation using `springdoc-openapi`, so API endpoints, request/response schemas, headers, query parameters, and status codes are documented and testable through Swagger UI.
+- Add Swagger/OpenAPI documentation using `springdoc-openapi`, so API endpoints, request/response schemas, headers, query parameters, and status codes are documented and testable through Swagger UI.
 
 ### Resilience
 - Add bounded retry logic for transient event publishing failures, with backoff to avoid overwhelming the broker.
