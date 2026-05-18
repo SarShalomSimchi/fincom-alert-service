@@ -24,25 +24,25 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MissingTenantException.class)
     public ResponseEntity<ErrorResponse> handleMissingTenant(MissingTenantException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(new ErrorResponse("missing_tenant", ex.getMessage()));
+                .body(new ErrorResponse(ErrorCodes.MISSING_TENANT, ex.getMessage()));
     }
 
     @ExceptionHandler(AlertNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleNotFound(AlertNotFoundException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(new ErrorResponse("not_found", ex.getMessage()));
+                .body(new ErrorResponse(ErrorCodes.NOT_FOUND, ex.getMessage()));
     }
 
     @ExceptionHandler(InvalidTransitionException.class)
     public ResponseEntity<ErrorResponse> handleInvalidTransition(InvalidTransitionException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(new ErrorResponse("invalid_transition", ex.getMessage()));
+                .body(new ErrorResponse(ErrorCodes.INVALID_TRANSITION, ex.getMessage()));
     }
 
     @ExceptionHandler(AlertAlreadyDecidedException.class)
     public ResponseEntity<ErrorResponse> handleAlreadyDecided(AlertAlreadyDecidedException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(new ErrorResponse("already_decided", ex.getMessage()));
+                .body(new ErrorResponse(ErrorCodes.ALREADY_DECIDED, ex.getMessage()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -51,7 +51,7 @@ public class GlobalExceptionHandler {
                 .map(fe -> fe.getField() + ": " + fe.getDefaultMessage())
                 .collect(Collectors.joining("; "));
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(new ErrorResponse("validation_error", message));
+                .body(new ErrorResponse(ErrorCodes.VALIDATION_ERROR, message));
     }
     
     @ExceptionHandler(ConstraintViolationException.class)
@@ -61,6 +61,6 @@ public class GlobalExceptionHandler {
             .collect(Collectors.joining(", "));
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
-                .body(new ErrorResponse("validation_error", message));
+                .body(new ErrorResponse(ErrorCodes.VALIDATION_ERROR, message));
     }
 }
