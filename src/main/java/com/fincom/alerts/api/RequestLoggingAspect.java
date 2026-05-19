@@ -6,8 +6,6 @@ import java.util.regex.Pattern;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
@@ -15,13 +13,13 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Aspect
 @Component
 public class RequestLoggingAspect {
 
-    private static final Logger log = LoggerFactory.getLogger(RequestLoggingAspect.class);
-    
     private static final String NOT_AVAILABLE = "N/A";
     private static final String MASKED_VALUE = "***";
     private static final Pattern SENSITIVE_QUERY_PARAM_PATTERN =
