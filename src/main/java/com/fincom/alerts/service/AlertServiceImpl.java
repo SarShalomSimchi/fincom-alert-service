@@ -18,9 +18,12 @@ import com.fincom.alerts.exception.AlertNotFoundException;
 import com.fincom.alerts.exception.InvalidTransitionException;
 import com.fincom.alerts.repository.AlertRepository;
 
+import lombok.RequiredArgsConstructor;
+
 
 
 @Service
+@RequiredArgsConstructor
 public class AlertServiceImpl implements AlertService {
 
     private final AlertRepository repository;
@@ -28,12 +31,6 @@ public class AlertServiceImpl implements AlertService {
     private final AlertMapper mapper;
     private final EventPublisher eventPublisher;
 
-    public AlertServiceImpl(AlertRepository repository, AlertValidator validator, AlertMapper mapper, EventPublisher eventPublisher) {
-        this.repository = repository;
-        this.validator = validator;
-        this.mapper = mapper;
-        this.eventPublisher = eventPublisher;
-    }
 
     @Override
     @Transactional
@@ -53,11 +50,10 @@ public class AlertServiceImpl implements AlertService {
     @Override
     @Transactional
     public AlertResponse decide(String alertId, String tenantId, DecisionRequest request) {
-    	AlertStatus decision = request.decision();
-    	if (decision != AlertStatus.CLEARED && decision != AlertStatus.CONFIRMED_HIT) {
-    		throw new InvalidTransitionException("Decision must be CLEARED or CONFIRMED_HIT");
-    	}
-    	
+        AlertStatus decision = request.decision();
+
+        validator.validateDecisionStatus(decision);
+
         Alert alert = repository.findByIdAndTenantId(alertId, tenantId)
                 .orElseThrow(() -> new AlertNotFoundException(alertId));
 

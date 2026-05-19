@@ -9,12 +9,8 @@ import org.springframework.web.method.support.ModelAndViewContainer;
 
 import com.fincom.alerts.exception.MissingTenantException;
 
-import jakarta.servlet.http.HttpServletRequest;
-
 @Component
 public class TenantArgumentResolver implements HandlerMethodArgumentResolver {
-
-    private static final String TENANT_HEADER = "X-Tenant-ID";
 
     @Override
     public boolean supportsParameter(MethodParameter parameter) {
@@ -22,16 +18,16 @@ public class TenantArgumentResolver implements HandlerMethodArgumentResolver {
     }
 
     @Override
-    public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer mavContainer,
-                                  NativeWebRequest webRequest, WebDataBinderFactory binderFactory) throws Exception {
-        HttpServletRequest request = webRequest.getNativeRequest(HttpServletRequest.class);
-        String tenantId = null;
-        if (request != null) {
-            tenantId = request.getHeader(TENANT_HEADER);
-        }
+    public Object resolveArgument(MethodParameter parameter,
+                                  ModelAndViewContainer mavContainer,
+                                  NativeWebRequest webRequest,
+                                  WebDataBinderFactory binderFactory) {
+        String tenantId = webRequest.getHeader(ApiHeaders.TENANT_ID);
+
         if (tenantId == null || tenantId.isBlank()) {
             throw new MissingTenantException();
         }
+
         return tenantId.trim();
     }
 }

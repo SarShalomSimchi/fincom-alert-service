@@ -72,7 +72,7 @@ class AlertControllerTest {
         mockMvc.perform(post("/api/v1/alerts")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(req))
-                .header("X-Tenant-ID", "tenant-1"))
+                .header(ApiHeaders.TENANT_ID, "tenant-1"))
                 .andExpect(status().isCreated())
                 .andExpect(content().json(objectMapper.writeValueAsString(sampleResponse)));
     }
@@ -84,7 +84,7 @@ class AlertControllerTest {
         mockMvc.perform(post("/api/v1/alerts")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(req))
-                .header("X-Tenant-ID", "tenant-1"))
+                .header(ApiHeaders.TENANT_ID, "tenant-1"))
                 .andExpect(status().isBadRequest());
     }
 
@@ -95,7 +95,7 @@ class AlertControllerTest {
         mockMvc.perform(post("/api/v1/alerts")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(body)
-                .header("X-Tenant-ID", "tenant-1"))
+                .header(ApiHeaders.TENANT_ID, "tenant-1"))
                 .andExpect(status().isBadRequest());
     }
 
@@ -119,14 +119,14 @@ class AlertControllerTest {
     void givenAlertsExist_whenGetList_thenReturns200WithList() throws Exception {
         when(alertService.list("tenant-1", null, null)).thenReturn(List.of(sampleResponse));
 
-        mockMvc.perform(get("/api/v1/alerts").header("X-Tenant-ID", "tenant-1"))
+        mockMvc.perform(get("/api/v1/alerts").header(ApiHeaders.TENANT_ID, "tenant-1"))
                 .andExpect(status().isOk())
                 .andExpect(content().json(objectMapper.writeValueAsString(List.of(sampleResponse))));
     }
 
     @Test
     void givenInvalidMinMatchScore_whenGetList_thenReturns400() throws Exception {
-        mockMvc.perform(get("/api/v1/alerts?minMatchScore=abc").header("X-Tenant-ID", "tenant-1"))
+        mockMvc.perform(get("/api/v1/alerts?minMatchScore=abc").header(ApiHeaders.TENANT_ID, "tenant-1"))
                 .andExpect(status().isBadRequest());
     }
 
@@ -138,7 +138,7 @@ class AlertControllerTest {
         mockMvc.perform(patch("/api/v1/alerts/a1/decision")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(req))
-                .header("X-Tenant-ID", "tenant-1"))
+                .header(ApiHeaders.TENANT_ID, "tenant-1"))
                 .andExpect(status().isOk())
                 .andExpect(content().json(objectMapper.writeValueAsString(sampleResponse)));
     }
@@ -152,7 +152,7 @@ class AlertControllerTest {
         mockMvc.perform(patch("/api/v1/alerts/a1/decision")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(req))
-                .header("X-Tenant-ID", "tenant-1"))
+                .header(ApiHeaders.TENANT_ID, "tenant-1"))
                 .andExpect(status().isConflict());
     }
 
@@ -165,7 +165,7 @@ class AlertControllerTest {
         mockMvc.perform(patch("/api/v1/alerts/a1/decision")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(req))
-                .header("X-Tenant-ID", "tenant-1"))
+                .header(ApiHeaders.TENANT_ID, "tenant-1"))
                 .andExpect(status().isNotFound());
     }
 
@@ -173,7 +173,7 @@ class AlertControllerTest {
     void givenValidEscalate_whenPatchEscalate_thenReturns200() throws Exception {
         when(alertService.escalate("a1", "tenant-1")).thenReturn(sampleResponse);
 
-        mockMvc.perform(patch("/api/v1/alerts/a1/escalate").header("X-Tenant-ID", "tenant-1"))
+        mockMvc.perform(patch("/api/v1/alerts/a1/escalate").header(ApiHeaders.TENANT_ID, "tenant-1"))
                 .andExpect(status().isOk())
                 .andExpect(content().json(objectMapper.writeValueAsString(sampleResponse)));
     }
@@ -182,7 +182,7 @@ class AlertControllerTest {
     void givenInvalidTransition_whenPatchEscalate_thenReturns400() throws Exception {
         when(alertService.escalate("a1", "tenant-1")).thenThrow(new InvalidTransitionException("bad"));
 
-        mockMvc.perform(patch("/api/v1/alerts/a1/escalate").header("X-Tenant-ID", "tenant-1"))
+        mockMvc.perform(patch("/api/v1/alerts/a1/escalate").header(ApiHeaders.TENANT_ID, "tenant-1"))
                 .andExpect(status().isBadRequest());
     }
 
@@ -190,7 +190,7 @@ class AlertControllerTest {
     void givenAlertNotFound_whenPatchEscalate_thenReturns404() throws Exception {
         when(alertService.escalate("a1", "tenant-1")).thenThrow(new AlertNotFoundException("a1"));
 
-        mockMvc.perform(patch("/api/v1/alerts/a1/escalate").header("X-Tenant-ID", "tenant-1"))
+        mockMvc.perform(patch("/api/v1/alerts/a1/escalate").header(ApiHeaders.TENANT_ID, "tenant-1"))
                 .andExpect(status().isNotFound());
     }
 }

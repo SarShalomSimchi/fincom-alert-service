@@ -12,8 +12,6 @@ import com.fincom.alerts.domain.AlertStatus;
 
 public interface AlertRepository extends JpaRepository<Alert, String> {
 
-    List<Alert> findByTenantId(String tenantId);
-
     Optional<Alert> findByIdAndTenantId(String id, String tenantId);
     
     @Query("SELECT a FROM Alert a WHERE a.tenantId = :tenantId " +

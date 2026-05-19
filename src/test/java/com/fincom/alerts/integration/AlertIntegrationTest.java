@@ -21,6 +21,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 
+import com.fincom.alerts.api.ApiHeaders;
 import com.fincom.alerts.api.dto.AlertResponse;
 import com.fincom.alerts.api.dto.CreateAlertRequest;
 import com.fincom.alerts.api.dto.DecisionRequest;
@@ -48,7 +49,7 @@ class AlertIntegrationTest {
         CreateAlertRequest req = new CreateAlertRequest(transactionId, matchedEntityName, matchScore, null);
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.add("X-Tenant-ID", tenantId);
+        headers.add(ApiHeaders.TENANT_ID, tenantId);
         HttpEntity<CreateAlertRequest> entity = new HttpEntity<>(req, headers);
         ResponseEntity<AlertResponse> resp = restTemplate.postForEntity(BASE, entity, AlertResponse.class);
         assertEquals(HttpStatus.CREATED, resp.getStatusCode());
@@ -83,7 +84,7 @@ class AlertIntegrationTest {
         CreateAlertRequest req = new CreateAlertRequest("tx-3", "ent-3", 200, null);
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.add("X-Tenant-ID", "tenant-1");
+        headers.add(ApiHeaders.TENANT_ID, "tenant-1");
         HttpEntity<CreateAlertRequest> entity = new HttpEntity<>(req, headers);
         ResponseEntity<String> resp = restTemplate.postForEntity(BASE, entity, String.class);
         assertEquals(HttpStatus.BAD_REQUEST, resp.getStatusCode());
@@ -94,7 +95,7 @@ class AlertIntegrationTest {
         CreateAlertRequest req = new CreateAlertRequest("", "ent-4", 30, null);
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.add("X-Tenant-ID", "tenant-1");
+        headers.add(ApiHeaders.TENANT_ID, "tenant-1");
         HttpEntity<CreateAlertRequest> entity = new HttpEntity<>(req, headers);
         ResponseEntity<String> resp = restTemplate.postForEntity(BASE, entity, String.class);
         assertEquals(HttpStatus.BAD_REQUEST, resp.getStatusCode());
@@ -106,7 +107,7 @@ class AlertIntegrationTest {
         createAlert("tenant-2", "tx-b", "e-b", 20);
 
         HttpHeaders headers = new HttpHeaders();
-        headers.add("X-Tenant-ID", "tenant-1");
+        headers.add(ApiHeaders.TENANT_ID, "tenant-1");
         ResponseEntity<AlertResponse[]> resp = restTemplate.exchange(BASE, HttpMethod.GET, new HttpEntity<>(headers), AlertResponse[].class);
 
         assertEquals(HttpStatus.OK, resp.getStatusCode());
@@ -120,7 +121,7 @@ class AlertIntegrationTest {
         AlertResponse a1 = createAlert("tenant-1", "tx-s1", "e1", 10);
         // escalate a1 to ESCALATED
         HttpHeaders headers = new HttpHeaders();
-        headers.add("X-Tenant-ID", "tenant-1");
+        headers.add(ApiHeaders.TENANT_ID, "tenant-1");
         ResponseEntity<AlertResponse> escResp = restTemplate.exchange(BASE + "/" + a1.id() + "/escalate", HttpMethod.PATCH, new HttpEntity<>(headers), AlertResponse.class);
         assertEquals(HttpStatus.OK, escResp.getStatusCode());
 
@@ -139,7 +140,7 @@ class AlertIntegrationTest {
         createAlert("tenant-1", "tx-m2", "e2", 85);
 
         HttpHeaders headers = new HttpHeaders();
-        headers.add("X-Tenant-ID", "tenant-1");
+        headers.add(ApiHeaders.TENANT_ID, "tenant-1");
         ResponseEntity<AlertResponse[]> resp = restTemplate.exchange(BASE + "?minMatchScore=80", HttpMethod.GET, new HttpEntity<>(headers), AlertResponse[].class);
         assertEquals(HttpStatus.OK, resp.getStatusCode());
         List<AlertResponse> list = Arrays.asList(resp.getBody());
@@ -152,7 +153,7 @@ class AlertIntegrationTest {
         AlertResponse a2 = createAlert("tenant-1", "tx-f2", "e2", 85); // open 85
         // escalate a2 so status not OPEN
         HttpHeaders headers = new HttpHeaders();
-        headers.add("X-Tenant-ID", "tenant-1");
+        headers.add(ApiHeaders.TENANT_ID, "tenant-1");
         restTemplate.exchange(BASE + "/" + a2.id() + "/escalate", HttpMethod.PATCH, new HttpEntity<>(headers), AlertResponse.class);
 
         ResponseEntity<AlertResponse[]> resp = restTemplate.exchange(BASE + "?status=OPEN&minMatchScore=80", HttpMethod.GET, new HttpEntity<>(headers), AlertResponse[].class);
@@ -164,7 +165,7 @@ class AlertIntegrationTest {
     void givenOpenAlert_whenEscalate_thenTransitionsToEscalatedAndReturns200() {
         AlertResponse created = createAlert("tenant-1");
         HttpHeaders headers = new HttpHeaders();
-        headers.add("X-Tenant-ID", "tenant-1");
+        headers.add(ApiHeaders.TENANT_ID, "tenant-1");
 
         ResponseEntity<AlertResponse> resp = restTemplate.exchange(BASE + "/" + created.id() + "/escalate", HttpMethod.PATCH, new HttpEntity<>(headers), AlertResponse.class);
         assertEquals(HttpStatus.OK, resp.getStatusCode());
@@ -175,7 +176,7 @@ class AlertIntegrationTest {
     void givenEscalatedAlert_whenEscalateAgain_thenReturnsUnprocessableEntity() {
         AlertResponse created = createAlert("tenant-1");
         HttpHeaders headers = new HttpHeaders();
-        headers.add("X-Tenant-ID", "tenant-1");
+        headers.add(ApiHeaders.TENANT_ID, "tenant-1");
         // first escalate
         restTemplate.exchange(BASE + "/" + created.id() + "/escalate", HttpMethod.PATCH, new HttpEntity<>(headers), AlertResponse.class);
         // second escalate
@@ -187,7 +188,7 @@ class AlertIntegrationTest {
     void givenAlertFromDifferentTenant_whenEscalate_thenReturnsNotFound() {
         AlertResponse created = createAlert("tenant-1");
         HttpHeaders headers = new HttpHeaders();
-        headers.add("X-Tenant-ID", "tenant-2");
+        headers.add(ApiHeaders.TENANT_ID, "tenant-2");
         ResponseEntity<String> resp = restTemplate.exchange(BASE + "/" + created.id() + "/escalate", HttpMethod.PATCH, new HttpEntity<>(headers), String.class);
         assertEquals(HttpStatus.NOT_FOUND, resp.getStatusCode());
     }
@@ -197,7 +198,7 @@ class AlertIntegrationTest {
         AlertResponse created = createAlert("tenant-1");
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.add("X-Tenant-ID", "tenant-1");
+        headers.add(ApiHeaders.TENANT_ID, "tenant-1");
 
         DecisionRequest req = new DecisionRequest(AlertStatus.CLEARED, "cleared-note");
         ResponseEntity<AlertResponse> resp = restTemplate.exchange(BASE + "/" + created.id() + "/decision", HttpMethod.PATCH, new HttpEntity<>(req, headers), AlertResponse.class);
@@ -210,7 +211,7 @@ class AlertIntegrationTest {
         AlertResponse created = createAlert("tenant-1");
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.add("X-Tenant-ID", "tenant-1");
+        headers.add(ApiHeaders.TENANT_ID, "tenant-1");
 
         DecisionRequest req = new DecisionRequest(AlertStatus.CONFIRMED_HIT, "hit-note");
         ResponseEntity<AlertResponse> resp = restTemplate.exchange(BASE + "/" + created.id() + "/decision", HttpMethod.PATCH, new HttpEntity<>(req, headers), AlertResponse.class);
@@ -223,7 +224,7 @@ class AlertIntegrationTest {
         AlertResponse created = createAlert("tenant-1");
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.add("X-Tenant-ID", "tenant-1");
+        headers.add(ApiHeaders.TENANT_ID, "tenant-1");
 
         DecisionRequest req = new DecisionRequest(AlertStatus.CLEARED, "note1");
         restTemplate.exchange(BASE + "/" + created.id() + "/decision", HttpMethod.PATCH, new HttpEntity<>(req, headers), AlertResponse.class);
@@ -237,7 +238,7 @@ class AlertIntegrationTest {
         AlertResponse created = createAlert("tenant-1");
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.add("X-Tenant-ID", "tenant-2");
+        headers.add(ApiHeaders.TENANT_ID, "tenant-2");
 
         DecisionRequest req = new DecisionRequest(AlertStatus.CLEARED, "note");
         ResponseEntity<String> resp = restTemplate.exchange(BASE + "/" + created.id() + "/decision", HttpMethod.PATCH, new HttpEntity<>(req, headers), String.class);
@@ -249,7 +250,7 @@ class AlertIntegrationTest {
         AlertResponse created = createAlert("tenant-1");
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.add("X-Tenant-ID", "tenant-1");
+        headers.add(ApiHeaders.TENANT_ID, "tenant-1");
 
         DecisionRequest req = new DecisionRequest(AlertStatus.CLEARED, "");
         ResponseEntity<String> resp = restTemplate.exchange(BASE + "/" + created.id() + "/decision", HttpMethod.PATCH, new HttpEntity<>(req, headers), String.class);
@@ -262,12 +263,12 @@ class AlertIntegrationTest {
         createAlert("tenant-2", "tx-t2", "e2", 20);
 
         HttpHeaders h1 = new HttpHeaders();
-        h1.add("X-Tenant-ID", "tenant-1");
+        h1.add(ApiHeaders.TENANT_ID, "tenant-1");
         ResponseEntity<AlertResponse[]> r1 = restTemplate.exchange(BASE, HttpMethod.GET, new HttpEntity<>(h1), AlertResponse[].class);
         assertEquals(1, Arrays.asList(r1.getBody()).size());
 
         HttpHeaders h2 = new HttpHeaders();
-        h2.add("X-Tenant-ID", "tenant-2");
+        h2.add(ApiHeaders.TENANT_ID, "tenant-2");
         ResponseEntity<AlertResponse[]> r2 = restTemplate.exchange(BASE, HttpMethod.GET, new HttpEntity<>(h2), AlertResponse[].class);
         assertEquals(1, Arrays.asList(r2.getBody()).size());
     }

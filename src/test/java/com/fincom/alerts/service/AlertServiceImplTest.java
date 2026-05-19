@@ -1,11 +1,12 @@
 package com.fincom.alerts.service;
 
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
@@ -117,9 +118,17 @@ class AlertServiceImplTest {
 
     @Test
     void givenAlert_whenDecideWithInvalidDecision_thenThrowsInvalidTransition() {
-        DecisionRequest req = new DecisionRequest(AlertStatus.OPEN, "note");
+        DecisionRequest request = new DecisionRequest(AlertStatus.OPEN, "note");
 
-        assertThrows(InvalidTransitionException.class, () -> service.decide("a1", "tenant-1", req));
+        doThrow(new InvalidTransitionException("Decision must be CLEARED or CONFIRMED_HIT"))
+                .when(validator)
+                .validateDecisionStatus(AlertStatus.OPEN);
+
+        assertThrows(InvalidTransitionException.class,
+                () -> service.decide("a1", "tenant-1", request));
+
+        verify(validator).validateDecisionStatus(AlertStatus.OPEN);
+        verifyNoInteractions(repository);
     }
 
     @Test

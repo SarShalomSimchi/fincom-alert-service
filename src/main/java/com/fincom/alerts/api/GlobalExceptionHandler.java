@@ -23,26 +23,22 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MissingTenantException.class)
     public ResponseEntity<ErrorResponse> handleMissingTenant(MissingTenantException ex) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(new ErrorResponse(ErrorCodes.MISSING_TENANT, ex.getMessage()));
+        return error(HttpStatus.BAD_REQUEST, ErrorCodes.MISSING_TENANT, ex.getMessage());
     }
 
     @ExceptionHandler(AlertNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleNotFound(AlertNotFoundException ex) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(new ErrorResponse(ErrorCodes.NOT_FOUND, ex.getMessage()));
+        return error(HttpStatus.NOT_FOUND, ErrorCodes.NOT_FOUND, ex.getMessage());
     }
 
     @ExceptionHandler(InvalidTransitionException.class)
     public ResponseEntity<ErrorResponse> handleInvalidTransition(InvalidTransitionException ex) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(new ErrorResponse(ErrorCodes.INVALID_TRANSITION, ex.getMessage()));
+        return error(HttpStatus.BAD_REQUEST, ErrorCodes.INVALID_TRANSITION, ex.getMessage());
     }
 
     @ExceptionHandler(AlertAlreadyDecidedException.class)
     public ResponseEntity<ErrorResponse> handleAlreadyDecided(AlertAlreadyDecidedException ex) {
-        return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(new ErrorResponse(ErrorCodes.ALREADY_DECIDED, ex.getMessage()));
+        return error(HttpStatus.CONFLICT, ErrorCodes.ALREADY_DECIDED, ex.getMessage());
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -50,8 +46,7 @@ public class GlobalExceptionHandler {
         String message = ex.getBindingResult().getFieldErrors().stream()
                 .map(fe -> fe.getField() + ": " + fe.getDefaultMessage())
                 .collect(Collectors.joining("; "));
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(new ErrorResponse(ErrorCodes.VALIDATION_ERROR, message));
+        return error(HttpStatus.BAD_REQUEST, ErrorCodes.VALIDATION_ERROR, message);
     }
     
     @ExceptionHandler(ConstraintViolationException.class)
@@ -59,8 +54,12 @@ public class GlobalExceptionHandler {
         String message = ex.getConstraintViolations().stream()
             .map(ConstraintViolation::getMessage)
             .collect(Collectors.joining(", "));
+        return error(HttpStatus.BAD_REQUEST, ErrorCodes.VALIDATION_ERROR, message);
+    }
+    
+    private ResponseEntity<ErrorResponse> error(HttpStatus status, String code, String message) {
         return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
-                .body(new ErrorResponse(ErrorCodes.VALIDATION_ERROR, message));
+                .status(status)
+                .body(new ErrorResponse(code, message));
     }
 }

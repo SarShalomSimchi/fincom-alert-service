@@ -1,22 +1,31 @@
 package com.fincom.alerts.api;
 
-import jakarta.servlet.http.HttpServletRequest;
+import java.util.function.Function;
+import java.util.regex.Pattern;
 
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 @Aspect
 @Component
 public class RequestLoggingAspect {
 
     private static final Logger log = LoggerFactory.getLogger(RequestLoggingAspect.class);
+    
+    private static final String NOT_AVAILABLE = "N/A";
+    private static final String MASKED_VALUE = "***";
+    private static final Pattern SENSITIVE_QUERY_PARAM_PATTERN =
+            Pattern.compile("(?i)(^|&)(authorization|token|password|secret|apikey)=([^&]*)");
 
     @Around("within(@org.springframework.web.bind.annotation.RestController *)")
     public Object logControllerRequest(ProceedingJoinPoint joinPoint) throws Throwable {
@@ -24,10 +33,10 @@ public class RequestLoggingAspect {
 
         HttpServletRequest request = currentRequest();
 
-        String httpMethod = request != null ? request.getMethod() : "N/A";
-        String uri = request != null ? request.getRequestURI() : "N/A";
+        String httpMethod = safeRequestValue(request, HttpServletRequest::getMethod);
+        String uri = safeRequestValue(request, HttpServletRequest::getRequestURI);
         String queryString = request != null ? request.getQueryString() : null;
-        String tenantId = request != null ? maskTenantId(request.getHeader("X-Tenant-ID")) : "N/A";
+        String tenantId = safeRequestValue(request, r -> maskTenantId(r.getHeader(ApiHeaders.TENANT_ID)));
 
         String className = joinPoint.getTarget().getClass().getSimpleName();
         String methodName = joinPoint.getSignature().getName();
@@ -83,12 +92,13 @@ public class RequestLoggingAspect {
             return responseEntity.getStatusCode().value();
         }
 
-        return 200;
+        return HttpStatus.OK.value(); 
     }
 
     private String sanitizeQueryString(String queryString) {
-        return queryString
-                .replaceAll("(?i)(authorization|token|password|secret|apiKey|apikey)=([^&]*)", "$1=***");
+        return SENSITIVE_QUERY_PARAM_PATTERN
+                .matcher(queryString)
+                .replaceAll("$1$2=" + MASKED_VALUE);
     }
 
     private String maskTenantId(String tenantId) {
@@ -99,9 +109,13 @@ public class RequestLoggingAspect {
         String trimmed = tenantId.trim();
 
         if (trimmed.length() <= 4) {
-            return "***";
+            return MASKED_VALUE;
         }
 
-        return trimmed.substring(0, 2) + "***" + trimmed.substring(trimmed.length() - 2);
+        return trimmed.substring(0, 2) + MASKED_VALUE + trimmed.substring(trimmed.length() - 2);
+    }
+
+    private String safeRequestValue(HttpServletRequest request, Function<HttpServletRequest, String> extractor) {
+        return request == null ? NOT_AVAILABLE : extractor.apply(request);
     }
 }

@@ -8,14 +8,13 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import com.fincom.alerts.api.TenantArgumentResolver;
 
+import lombok.RequiredArgsConstructor;
+
 @Configuration
+@RequiredArgsConstructor
 public class WebConfig implements WebMvcConfigurer {
 
     private final TenantArgumentResolver tenantArgumentResolver;
-
-    public WebConfig(TenantArgumentResolver tenantArgumentResolver) {
-        this.tenantArgumentResolver = tenantArgumentResolver;
-    }
 
     @Override
     public void addArgumentResolvers(List<HandlerMethodArgumentResolver> resolvers) {
