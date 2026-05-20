@@ -25,6 +25,7 @@ import com.fincom.alerts.api.dto.DecisionRequest;
 import com.fincom.alerts.domain.Alert;
 import com.fincom.alerts.domain.AlertStatus;
 import com.fincom.alerts.domain.AlertValidator;
+import com.fincom.alerts.event.AlertEvent;
 import com.fincom.alerts.event.EventPublisher;
 import com.fincom.alerts.exception.AlertAlreadyDecidedException;
 import com.fincom.alerts.exception.AlertNotFoundException;
@@ -94,18 +95,27 @@ class AlertServiceImplTest {
     @Test
     void givenOpenAlert_whenDecideWithCleared_thenUpdatesSavesAndPublishes() {
         DecisionRequest req = new DecisionRequest(AlertStatus.CLEARED, "ok");
-        when(repository.findByIdAndTenantId("a1", "tenant-1")).thenReturn(Optional.of(alertEntity));
+
+        when(repository.findByIdAndTenantId("a1", "tenant-1"))
+                .thenReturn(Optional.of(alertEntity));
+
+        doNothing().when(validator).validateDecisionStatus(AlertStatus.CLEARED);
         doNothing().when(validator).validateDecide(alertEntity);
 
-        // mapper not involved here for inputs/outputs; repository.save returns updated entity
-        when(repository.save(any(Alert.class))).thenAnswer(inv -> inv.getArgument(0));
-        when(mapper.toResponse(any(Alert.class))).thenReturn(alertResponse);
+        when(repository.saveAndFlush(any(Alert.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        when(mapper.toResponse(any(Alert.class)))
+                .thenReturn(alertResponse);
 
         service.decide("a1", "tenant-1", req);
 
+        verify(validator).validateDecisionStatus(AlertStatus.CLEARED);
         verify(repository).findByIdAndTenantId("a1", "tenant-1");
-        verify(repository).save(any(Alert.class));
-        verify(eventPublisher).publish(any(com.fincom.alerts.event.AlertEvent.class));
+        verify(validator).validateDecide(alertEntity);
+        verify(repository).saveAndFlush(any(Alert.class));
+        verify(eventPublisher).publish(any(AlertEvent.class));
+        verify(mapper).toResponse(any(Alert.class));
     }
 
     @Test

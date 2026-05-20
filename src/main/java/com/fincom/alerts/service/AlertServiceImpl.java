@@ -2,6 +2,7 @@ package com.fincom.alerts.service;
 
 import java.util.List;
 
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,8 +15,8 @@ import com.fincom.alerts.domain.AlertValidator;
 import com.fincom.alerts.event.AlertDecidedEvent;
 import com.fincom.alerts.event.AlertEscalatedEvent;
 import com.fincom.alerts.event.EventPublisher;
+import com.fincom.alerts.exception.AlertAlreadyDecidedException;
 import com.fincom.alerts.exception.AlertNotFoundException;
-import com.fincom.alerts.exception.InvalidTransitionException;
 import com.fincom.alerts.repository.AlertRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -50,23 +51,27 @@ public class AlertServiceImpl implements AlertService {
     @Override
     @Transactional
     public AlertResponse decide(String alertId, String tenantId, DecisionRequest request) {
-        AlertStatus decision = request.decision();
+        try {
+            AlertStatus decision = request.decision();
 
-        validator.validateDecisionStatus(decision);
+            validator.validateDecisionStatus(decision);
 
-        Alert alert = repository.findByIdAndTenantId(alertId, tenantId)
-                .orElseThrow(() -> new AlertNotFoundException(alertId));
+            Alert alert = repository.findByIdAndTenantId(alertId, tenantId)
+                    .orElseThrow(() -> new AlertNotFoundException(alertId));
 
-        validator.validateDecide(alert);
+            validator.validateDecide(alert);
 
-        alert.setStatus(decision);
-        alert.setDecisionNote(request.decisionNote());
+            alert.setStatus(decision);
+            alert.setDecisionNote(request.decisionNote());
 
-        Alert saved = repository.save(alert);
+            Alert saved = repository.saveAndFlush(alert);
 
-        eventPublisher.publish(AlertDecidedEvent.of(saved));
+            eventPublisher.publish(AlertDecidedEvent.of(saved));
 
-        return mapper.toResponse(saved);
+            return mapper.toResponse(saved);
+        } catch (ObjectOptimisticLockingFailureException ex) {
+            throw new AlertAlreadyDecidedException("Alert was already decided by another request");
+        }
     }
 
     @Override
