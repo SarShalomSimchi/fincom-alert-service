@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -18,6 +19,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 
 import com.fincom.alerts.api.dto.AlertResponse;
 import com.fincom.alerts.api.dto.CreateAlertRequest;
@@ -116,6 +118,30 @@ class AlertServiceImplTest {
         verify(repository).saveAndFlush(any(Alert.class));
         verify(eventPublisher).publish(any(AlertEvent.class));
         verify(mapper).toResponse(any(Alert.class));
+    }
+    
+    @Test
+    void givenConcurrentDecision_whenDecide_thenThrowsAlertAlreadyDecided() {
+        DecisionRequest req = new DecisionRequest(AlertStatus.CLEARED, "ok");
+
+        when(repository.findByIdAndTenantId("a1", "tenant-1"))
+                .thenReturn(Optional.of(alertEntity));
+
+        doNothing().when(validator).validateDecisionStatus(AlertStatus.CLEARED);
+        doNothing().when(validator).validateDecide(alertEntity);
+
+        when(repository.saveAndFlush(any(Alert.class)))
+                .thenThrow(new ObjectOptimisticLockingFailureException(Alert.class, "a1"));
+
+        assertThrows(AlertAlreadyDecidedException.class,
+                () -> service.decide("a1", "tenant-1", req));
+
+        verify(validator).validateDecisionStatus(AlertStatus.CLEARED);
+        verify(repository).findByIdAndTenantId("a1", "tenant-1");
+        verify(validator).validateDecide(alertEntity);
+        verify(repository).saveAndFlush(any(Alert.class));
+        verifyNoInteractions(eventPublisher);
+        verify(mapper, never()).toResponse(any(Alert.class));
     }
 
     @Test
